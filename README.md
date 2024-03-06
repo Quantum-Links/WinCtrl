@@ -7,7 +7,10 @@ udp端口默认为10001
 
 控制命令
 
->shutdown    -关闭电脑 
->restart     -重启电脑 
->volume0     -音量调整至0 
+>shutdown    -关闭电脑
+>
+>restart     -重启电脑
+>
+>volume0     -音量调整至0
+>
 >volume100   -音量调整至100 
