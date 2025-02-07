@@ -1,18 +1,17 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
-
 using Microsoft.Win32;
-
 
 namespace WinCtrl
 {
     public partial class MainForm : Form
     {
-        byte[] success = Encoding.UTF8.GetBytes("success");
+	    private readonly byte[] _success = Encoding.UTF8.GetBytes("success");
         public MainForm()
         {
             InitializeComponent();
@@ -21,43 +20,58 @@ namespace WinCtrl
             AsyncReceive(udpClient);
             SetStartup(true);
         }
-        async void AsyncReceive(UdpClient udpClient)
-        {
-            while (true)
-            {
-                try
-                {
-                    var buffer = await udpClient.ReceiveAsync();
-                    var str = Encoding.UTF8.GetString(buffer.Buffer);
-                    if (str.Substring(0, 6) == "volume")
-                    {
-                        int volume = int.Parse(str.Substring(6));
-                        SetMasterVolume(volume);
-                        continue;
-                    }
-                    switch (str)
-                    {
-                        case "shutdown":
-                            StartCMD("-s");
-                            break;
-                        case "restart":
-                            StartCMD("-r");
-                            break;
-                    }
-                    _ = udpClient.SendAsync(success, success.Length, buffer.RemoteEndPoint);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.ToString());
-                }
-            }
-        }
+        [DllImport("winmm.dll")]
+        public static extern int waveOutGetVolume(IntPtr hwo, out uint dwVolume);
+        private async void AsyncReceive(UdpClient udpClient)
+		{
+			while (true)
+			{
+				try
+				{
+					var result = await udpClient.ReceiveAsync();
+					var receivedStr = Encoding.UTF8.GetString(result.Buffer, 0, result.Buffer.Length);
+					HandleCommand(receivedStr, result.RemoteEndPoint);
+					await udpClient.SendAsync(_success, _success.Length, result.RemoteEndPoint);
+				}
+				catch (Exception ex)
+				{
+					Console.WriteLine(ex.ToString());
+				}
+			}
+		}
+		private void HandleCommand(string command, IPEndPoint remoteEndpoint)
+		{
+			switch (command)
+			{
+				case "shutdown":
+					StartCmd("-s");
+					break;
+				case "restart":
+					StartCmd("-r");
+					break;
+				case "volumeup":
+					Audio.Volume = Math.Min(Audio.Volume + 5, 100);
+					break;
+				case "volumedown":
+					Audio.Volume = Math.Max(Audio.Volume - 5, 0);
+					break;
+				default:
+					Console.WriteLine($"Unknown command: {command}");
+					break;
+			}
 
-        public void SetMasterVolume(int volume)
-        {
-            Audio.Volume = volume;
-        }
-        void StartCMD(string order)
+			if (!command.StartsWith("volume")) return;
+			if (int.TryParse(command.Substring(6), out int volume))
+			{
+				Audio.Volume = volume;
+			}
+			else
+			{
+				Console.WriteLine($"Invalid volume value: {command}");
+			}
+		}
+
+		private static void StartCmd(string order)
         {
             ProcessStartInfo psi = new ProcessStartInfo
             {
@@ -68,23 +82,21 @@ namespace WinCtrl
             };
             Process.Start(psi);
         }
-        private void ContextMenu_ItemClicked(object sender, ToolStripItemClickedEventArgs e)
+        private static void ContextMenu_ItemClicked(object sender, ToolStripItemClickedEventArgs e)
         {
             Application.Exit();
         }
         private void SetStartup(bool enable)
         {
-            using (RegistryKey key = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true))
+            using (var key = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true))
             {
                 if (enable)
                 {
-                    // 设置开机自启
-                    key.SetValue(Application.ProductName, Application.ExecutablePath);
+                    key?.SetValue(Application.ProductName, Application.ExecutablePath);
                 }
                 else
                 {
-                    // 取消开机自启
-                    key.DeleteValue(Application.ProductName, false);
+                    key?.DeleteValue(Application.ProductName, false);
                 }
             }
         }
@@ -116,26 +128,23 @@ interface IMMDeviceEnumerator
 [ComImport, Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")] class MMDeviceEnumeratorComObject { }
 public class Audio
 {
-    private static readonly IAudioEndpointVolume _MMVolume;
+    private static readonly IAudioEndpointVolume MmVolume;
 
     static Audio()
     {
         var enumerator = new MMDeviceEnumeratorComObject() as IMMDeviceEnumerator;
         enumerator.GetDefaultAudioEndpoint(0, 1, out IMMDevice dev);
         var aevGuid = typeof(IAudioEndpointVolume).GUID;
-        dev.Activate(ref aevGuid, 1, 0, out _MMVolume);
+        dev.Activate(ref aevGuid, 1, 0, out MmVolume);
     }
 
     public static int Volume
     {
         get
         {
-            _MMVolume.GetMasterVolumeLevelScalar(out float level);
+            MmVolume.GetMasterVolumeLevelScalar(out var level);
             return (int)(level * 100);
         }
-        set
-        {
-            _MMVolume.SetMasterVolumeLevelScalar((float)value / 100, default);
-        }
+        set => MmVolume.SetMasterVolumeLevelScalar((float)value / 100, default);
     }
 }
