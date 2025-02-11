@@ -16,3 +16,7 @@ udp端口默认为10001
 >volume0     -音量调整至0
 >
 >volume100   -音量调整至100 
+>
+>volumeup   -音量增加5
+>
+>volumedown   -音量减少5
