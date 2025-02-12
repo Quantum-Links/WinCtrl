@@ -20,3 +20,13 @@ udp端口默认为10001
 >volumeup   -音量增加5
 >
 >volumedown   -音量减少5
+>
+>playvideo xxx  -播放本机xxx路径视频
+> 
+> pause -暂停视频
+> 
+> play -继续播放
+> 
+> hidevideo -隐藏视频播放
+> 
+> setvideo 0.1 -设置视频播放进度百分比 0.1就是10%

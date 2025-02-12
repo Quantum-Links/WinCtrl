@@ -6,12 +6,15 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
 using Microsoft.Win32;
+using System.Windows.Forms.Integration;
+using System.Windows.Controls;
 
 namespace WinCtrl
 {
     public partial class MainForm : Form
     {
-	    private readonly byte[] _success = Encoding.UTF8.GetBytes("success");
+        private MediaElement mediaElement;
+		private readonly byte[] _success = Encoding.UTF8.GetBytes("success");
         public MainForm()
         {
             InitializeComponent();
@@ -19,7 +22,29 @@ namespace WinCtrl
             UdpClient udpClient = new UdpClient(10001);
             AsyncReceive(udpClient);
             SetStartup(true);
-        }
+			mediaElement = new MediaElement();
+			mediaElement.LoadedBehavior = MediaState.Manual;
+			elementHost1.Child = mediaElement;
+			mediaElement.MediaEnded += (s, e) =>
+			{
+				mediaElement.Position = TimeSpan.Zero;
+				mediaElement.Play();
+			};
+		}
+        private void PlayVideo(string url)
+        {
+			try
+			{
+				mediaElement.Source = new Uri(url);
+				mediaElement.Play();
+				WindowState = FormWindowState.Maximized;
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show($"播放失败：{ex.Message}\n{url}");
+				WindowState = FormWindowState.Minimized;
+			}
+		}
         [DllImport("winmm.dll")]
         public static extern int waveOutGetVolume(IntPtr hwo, out uint dwVolume);
         private async void AsyncReceive(UdpClient udpClient)
@@ -39,35 +64,56 @@ namespace WinCtrl
 				}
 			}
 		}
-		private void HandleCommand(string command, IPEndPoint remoteEndpoint)
-		{
-			switch (command)
-			{
-				case "shutdown":
-					StartCmd("-s");
-					break;
-				case "restart":
-					StartCmd("-r");
-					break;
-				case "volumeup":
-					Audio.Volume = Math.Min(Audio.Volume + 5, 100);
-					break;
-				case "volumedown":
-					Audio.Volume = Math.Max(Audio.Volume - 5, 0);
+        private void HandleCommand(string command, IPEndPoint remoteEndpoint)
+        {
+            switch (command)
+            {
+                case "shutdown":
+                    StartCmd("-s");
+                    break;
+                case "restart":
+                    StartCmd("-r");
+                    break;
+                case "volumeup":
+                    Audio.Volume = Math.Min(Audio.Volume + 5, 100);
+                    break;
+                case "volumedown":
+                    Audio.Volume = Math.Max(Audio.Volume - 5, 0);
+                    break;
+                case "play":
+                    mediaElement.Play();
+                    break;
+                case "pause":
+                    mediaElement.Pause();
+                    break;
+                case "hidevideo":
+                    WindowState = FormWindowState.Minimized;
 					break;
 				default:
-					Console.WriteLine($"Unknown command: {command}");
-					break;
-			}
+                    Console.WriteLine($"Unknown command: {command}");
+                    break;
+            }
 
-			if (!command.StartsWith("volume")) return;
-			if (int.TryParse(command.Substring(6), out int volume))
+            if (command.StartsWith("volume"))
+            {
+                if (int.TryParse(command.Substring(6), out int volume))
+                {
+                    Audio.Volume = volume;
+                }
+                else
+                {
+                    Console.WriteLine($"Invalid volume value: {command}");
+                }
+            }
+            if (command.StartsWith("playvideo"))
+            {
+                PlayVideo(command.Substring(9));
+            }
+			if (command.StartsWith("setvideo"))
 			{
-				Audio.Volume = volume;
-			}
-			else
-			{
-				Console.WriteLine($"Invalid volume value: {command}");
+				TimeSpan totalDuration = mediaElement.NaturalDuration.TimeSpan;
+				var percentage = float.Parse(command.Substring(8));
+				mediaElement.Position = new TimeSpan((long)(totalDuration.Ticks * percentage));
 			}
 		}
 

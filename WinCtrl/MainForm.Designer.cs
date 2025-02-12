@@ -33,6 +33,7 @@
 			this.notifyIcon = new System.Windows.Forms.NotifyIcon(this.components);
 			this.contextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
 			this.toolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
+			this.elementHost1 = new System.Windows.Forms.Integration.ElementHost();
 			this.contextMenu.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -58,12 +59,26 @@
 			this.toolStripMenuItem1.Size = new System.Drawing.Size(108, 24);
 			this.toolStripMenuItem1.Text = "关闭";
 			// 
+			// elementHost1
+			// 
+			this.elementHost1.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.elementHost1.Location = new System.Drawing.Point(0, 0);
+			this.elementHost1.Margin = new System.Windows.Forms.Padding(0);
+			this.elementHost1.Name = "elementHost1";
+			this.elementHost1.Size = new System.Drawing.Size(1175, 706);
+			this.elementHost1.TabIndex = 1;
+			this.elementHost1.Text = "elementHost1";
+			this.elementHost1.Child = null;
+			// 
 			// MainForm
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+			this.BackColor = System.Drawing.SystemColors.Desktop;
 			this.ClientSize = new System.Drawing.Size(1175, 706);
 			this.ControlBox = false;
+			this.Controls.Add(this.elementHost1);
+			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
 			this.Margin = new System.Windows.Forms.Padding(4);
 			this.MaximizeBox = false;
 			this.MinimizeBox = false;
@@ -72,6 +87,7 @@
 			this.ShowInTaskbar = false;
 			this.SizeGripStyle = System.Windows.Forms.SizeGripStyle.Hide;
 			this.Text = "MainForm";
+			this.TopMost = true;
 			this.WindowState = System.Windows.Forms.FormWindowState.Minimized;
 			this.contextMenu.ResumeLayout(false);
 			this.ResumeLayout(false);
@@ -83,6 +99,7 @@
         private System.Windows.Forms.NotifyIcon notifyIcon;
         private System.Windows.Forms.ContextMenuStrip contextMenu;
         private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem1;
+		private System.Windows.Forms.Integration.ElementHost elementHost1;
 	}
 }
 
